@@ -20,17 +20,18 @@ model Group {
 
 model User {
     id         Int     @id @default(autoincrement())
-    telegramId String  @unique
+    telegramId String
     name       String
     username   String?
-    groupId    Int
+    groupId    String
 
-    group Group @relation(fields: [groupId], references: [id])
+    group Group @relation(fields: [groupId], references: [telegramId])
 
     createdAt       DateTime @default(now())
     giverMatches    Match[]  @relation("GiverMatches")
     receiverMatches Match[]  @relation("ReceiverMatches")
 
+    @@unique([groupId, telegramId])
     @@map("users")
 }
 

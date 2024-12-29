@@ -18,8 +18,10 @@ export class GreeterUpdate {
   async onStart(@Ctx() ctx: Context & { payload?: string }): Promise<string> {
     if (ctx.chat.type === 'private' && ctx.payload) {
       const payload = ctx.payload;
-      if (payload === 'register') {
-        await ctx.scene.enter(WIZARD_SCENE_ID);
+      console.log(payload);
+      if (payload.startsWith('register_')) {
+        const groupId = payload.split('_')[1];
+        await ctx.scene.enter(WIZARD_SCENE_ID, { groupId });
       }
     } else if (ctx.chat.type === 'private') {
       return 'Hello! This bot works best in groups. Start it from the group chat!';
@@ -51,18 +53,13 @@ export class GreeterUpdate {
           [
             Markup.button.url(
               'Register',
-              `https://t.me/${ctx.botInfo.username}?start=register`,
+              `https://t.me/${ctx.botInfo.username}?start=register_${ctx.chat.id}`,
             ),
           ],
         ]),
       );
       return;
     }
-    await ctx.scene.enter(WIZARD_SCENE_ID);
-  }
-
-  @Command('wizard')
-  async onWizardCommand(@Ctx() ctx: Context): Promise<void> {
     await ctx.scene.enter(WIZARD_SCENE_ID);
   }
 }

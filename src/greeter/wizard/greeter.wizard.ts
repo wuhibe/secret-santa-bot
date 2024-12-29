@@ -1,15 +1,21 @@
-import * as fs from 'fs/promises';
 import { Ctx, Message, On, Wizard, WizardStep } from 'nestjs-telegraf';
-import { WizardContext } from 'telegraf/typings/scenes';
 import { WIZARD_SCENE_ID } from '../../app.constants';
-import { UserData } from '../../interfaces/user-data.interface';
+import { Context } from '../../interfaces/context.interface';
+import { GreeterService } from '../greeter.service';
 
 @Wizard(WIZARD_SCENE_ID)
 export class GreeterWizard {
-  private readonly DATA_FILE = 'user-data.json';
+  constructor(private readonly greeterService: GreeterService) {}
 
   @WizardStep(1)
-  async onSceneEnter(@Ctx() ctx: WizardContext): Promise<string> {
+  async onSceneEnter(@Ctx() ctx: Context): Promise<string> {
+    const groupId = ctx.wizard.state.groupId;
+    const userId = ctx.from.id;
+    const user = await this.greeterService.getUser(groupId, userId);
+    if (user) {
+      ctx.wizard.next();
+      return `Welcome back ${user.name}! No action needed for now.`;
+    }
     ctx.wizard.next();
     return 'Welcome! Please send me your name 👋';
   }
@@ -17,46 +23,40 @@ export class GreeterWizard {
   @On('text')
   @WizardStep(2)
   async onName(
-    @Ctx() ctx: WizardContext & { wizard: { state: { name: string } } },
+    @Ctx()
+    ctx: Context & {
+      wizard: { state: { name: string; groupId: number } };
+    },
     @Message() msg: { text: string },
   ): Promise<string> {
     ctx.wizard.state['name'] = msg.text;
-    const userData: UserData = {
-      id: ctx.from.id,
-      name: ctx.wizard.state.name,
-      username: ctx.from.username,
-      joinedAt: new Date(),
-    };
-
-    await this.saveUserData(userData);
-    await ctx.scene.leave();
-    return `Thanks ${userData.name}! Your information has been recorded. Welcome to the group! 🎉`;
+    ctx.wizard.next();
+    return `Is this information correct?\n\nName: ${msg.text}\nUsername: ${ctx.from.username || 'Not set'}\n\nSend 'yes' or 'y' to confirm or 'no' or 'n' to restart.`;
   }
 
-  private async saveUserData(userData: UserData): Promise<void> {
-    try {
-      let existingData: UserData[] = [];
-      try {
-        const fileContent = await fs.readFile(this.DATA_FILE, 'utf-8');
-        existingData = JSON.parse(fileContent);
-      } catch (error) {
-        // File doesn't exist yet, start with empty array
-      }
+  @On('text')
+  @WizardStep(3)
+  async onConfirmation(
+    @Ctx()
+    ctx: Context,
+    @Message() msg: { text: string },
+  ): Promise<string> {
+    const answer = msg.text.toLowerCase();
 
-      // Update existing user data or add new user
-      const userIndex = existingData.findIndex(
-        (user) => user.id === userData.id,
+    if (answer === 'yes' || answer === 'y') {
+      const user = await this.greeterService.saveUser(
+        ctx.from.id,
+        ctx.wizard.state.name,
+        ctx.wizard.state.groupId,
       );
-      if (userIndex !== -1) {
-        existingData[userIndex] = userData;
-      } else {
-        existingData.push(userData);
-      }
 
-      await fs.writeFile(this.DATA_FILE, JSON.stringify(existingData, null, 2));
-    } catch (error) {
-      console.error('Error saving user data:', error);
-      throw new Error('Failed to save user data');
+      await ctx.scene.leave();
+      return `Thanks ${user.name}! Your information has been recorded. Welcome to the group! 🎉`;
+    } else if (answer === 'no' || answer === 'n') {
+      ctx.wizard.selectStep(1);
+      return "Let's start over. Please send me your name 👋";
+    } else {
+      return 'Please send "yes" to confirm or "no" to restart.';
     }
   }
 }

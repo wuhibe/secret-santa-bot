@@ -14,14 +14,18 @@ export class GreeterService {
     });
   }
 
+  async getGroups() {
+    return await this.prisma.group.findMany();
+  }
+
   async getGroup(groupId: number) {
     return await this.prisma.group.findUnique({
       where: { telegramId: groupId.toString() },
     });
   }
 
-  async saveUser(userId: number, userName: string, groupId: number) {
-    await this.prisma.user.create({
+  async saveUser(userId: number, userName: string, groupId: string) {
+    return await this.prisma.user.create({
       data: {
         telegramId: userId.toString(),
         name: userName,
@@ -30,19 +34,15 @@ export class GreeterService {
     });
   }
 
-  async getUser(userId: number) {
+  async getUser(groupId: string, userId: number) {
     return await this.prisma.user.findUnique({
-      where: { telegramId: userId.toString() },
+      where: { groupId_telegramId: { groupId, telegramId: userId.toString() } },
     });
   }
 
-  async getUsersByGroupId(groupId: number) {
+  async getUsersByGroupId(groupId: string) {
     return await this.prisma.user.findMany({
-      where: { groupId: groupId },
+      where: { groupId },
     });
-  }
-
-  async getGroups() {
-    return await this.prisma.group.findMany();
   }
 }

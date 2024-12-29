@@ -1,4 +1,5 @@
-import { Scenes } from 'telegraf';
+import { WizardContext } from 'telegraf/typings/scenes';
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface Context extends Scenes.SceneContext {}
+export type Context = WizardContext & {
+  wizard: { state: { groupId: string; name: string } };
+};
