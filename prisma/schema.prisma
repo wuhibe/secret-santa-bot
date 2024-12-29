@@ -1,0 +1,44 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_PRIVATE_URL")
+}
+
+model Group {
+    id         Int    @id @default(autoincrement())
+    telegramId String @unique
+    name       String
+
+    createdAt DateTime @default(now())
+    users     User[]
+
+    @@map("groups")
+}
+
+model User {
+    id         Int     @id @default(autoincrement())
+    telegramId String  @unique
+    name       String
+    username   String?
+    groupId    Int
+
+    group Group @relation(fields: [groupId], references: [id])
+
+    createdAt       DateTime @default(now())
+    giverMatches    Match[]  @relation("GiverMatches")
+    receiverMatches Match[]  @relation("ReceiverMatches")
+
+    @@map("users")
+}
+
+model Match {
+    id         Int @id @default(autoincrement())
+    giverId    Int
+    receiverId Int
+
+    giver    User @relation(fields: [giverId], references: [id], name: "GiverMatches")
+    receiver User @relation(fields: [receiverId], references: [id], name: "ReceiverMatches")
+}

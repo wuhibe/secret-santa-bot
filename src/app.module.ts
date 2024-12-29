@@ -5,9 +5,11 @@ import { Telegraf } from 'telegraf';
 import { GreeterBotName } from './app.constants';
 import { GreeterModule } from './greeter/greeter.module';
 import { sessionMiddleware } from './middleware/session.middleware';
+import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
   imports: [
+    PrismaModule,
     TelegrafModule.forRootAsync({
       botName: GreeterBotName,
       useFactory: () => ({
@@ -26,11 +28,7 @@ export class AppModule implements OnApplicationBootstrap {
   ) {}
 
   async onApplicationBootstrap() {
-    const commands = [
-      { command: 'start', description: 'Start the bot' },
-      { command: 'wizard', description: 'Start the wizard dialog' },
-      { command: 'app', description: 'Open web application' },
-    ];
+    const commands = [{ command: 'start', description: 'Start the bot' }];
 
     await this.bot.telegram.setMyCommands(commands);
   }
