@@ -1,10 +1,10 @@
 import { Ctx, Message, On, Wizard, WizardStep } from 'nestjs-telegraf';
-import { WIZARD_SCENE_ID } from '../../app.constants';
+import { EDIT_PROFILE_SCENE_ID } from '../../app.constants';
 import { Context } from '../../interfaces/context.interface';
 import { GreeterService } from '../greeter.service';
 
-@Wizard(WIZARD_SCENE_ID)
-export class GreeterWizard {
+@Wizard(EDIT_PROFILE_SCENE_ID)
+export class EditProfileWizard {
   constructor(private readonly greeterService: GreeterService) {}
 
   @WizardStep(1)
@@ -14,10 +14,10 @@ export class GreeterWizard {
     const user = await this.greeterService.getUser(groupId, userId);
     if (user) {
       ctx.wizard.next();
-      return `Welcome back ${user.name}!\nNo action needed from you for now.\n\nYour Secret Santa recipient will be announced soon!`;
+      return `Please send me your name 👋`;
+    } else {
+      return 'You are not registered in any group.';
     }
-    ctx.wizard.next();
-    return 'Welcome! Please send me your name 👋';
   }
 
   @On('text')
@@ -46,12 +46,12 @@ export class GreeterWizard {
       const user = await this.greeterService.saveUser(
         ctx.from.id,
         ctx.wizard.state.name,
-        ctx.from.username,
+        ctx.wizard.state.username,
         ctx.wizard.state.groupId,
       );
 
       await ctx.scene.leave();
-      return `Thanks ${user.name}! Your information has been recorded. Welcome to the group! 🎉`;
+      return `Thanks ${user.name}! Your information has been recorded.`;
     } else if (answer === 'no' || answer === 'n') {
       ctx.wizard.selectStep(1);
       return "Let's start over. Please send me your name 👋";

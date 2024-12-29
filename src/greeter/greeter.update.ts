@@ -1,13 +1,14 @@
-import { Group } from '@prisma/client';
+import { Group, User } from '@prisma/client';
 import { Command, Ctx, Start, Update } from 'nestjs-telegraf';
 import { Markup } from 'telegraf';
-import { WIZARD_SCENE_ID } from '../app.constants';
+import { EDIT_PROFILE_SCENE_ID, WIZARD_SCENE_ID } from '../app.constants';
 import { Context } from '../interfaces/context.interface';
 import { GreeterService } from './greeter.service';
 
 @Update()
 export class GreeterUpdate {
-  private groups: Group[];
+  private groups: (Group & { users: User[] })[];
+
   constructor(private readonly greeterService: GreeterService) {
     this.greeterService.getGroups().then((groups) => {
       this.groups = groups;
@@ -18,7 +19,6 @@ export class GreeterUpdate {
   async onStart(@Ctx() ctx: Context & { payload?: string }): Promise<string> {
     if (ctx.chat.type === 'private' && ctx.payload) {
       const payload = ctx.payload;
-      console.log(payload);
       if (payload.startsWith('register_')) {
         const groupId = payload.split('_')[1];
         await ctx.scene.enter(WIZARD_SCENE_ID, { groupId });
@@ -36,17 +36,7 @@ export class GreeterUpdate {
           ctx.chat.title,
         );
         this.groups.push(group);
-        await ctx.reply(
-          `Hello ${group.name}! I'm here to help manage the group. Use /register to provide your information.`,
-        );
       }
-      return;
-    }
-  }
-
-  @Command('register')
-  async onRegisterCommand(@Ctx() ctx: Context): Promise<void> {
-    if (ctx.chat.type !== 'private') {
       await ctx.reply(
         'Please send me a private message to register.',
         Markup.inlineKeyboard([
@@ -58,8 +48,95 @@ export class GreeterUpdate {
           ],
         ]),
       );
+    }
+  }
+
+  @Command('list')
+  async onListCommand(@Ctx() ctx: Context): Promise<void> {
+    if (ctx.chat.type !== 'private') {
+      const group = await this.greeterService.getGroup(ctx.chat.id.toString());
+      const users = await this.greeterService.getUsersByGroupId(
+        group.telegramId,
+      );
+      await ctx.reply(
+        `Users in ${group.name}:\n\n${users
+          .map(
+            (user) =>
+              `${user.name} (${user.username ? '@' + user.username : 'No username'})`,
+          )
+          .join('\n')}`,
+      );
+    } else {
+      await ctx.reply('Please use this command in a group chat.');
+    }
+  }
+
+  @Command('edit_profile')
+  async onEditProfileCommand(@Ctx() ctx: Context): Promise<void> {
+    if (ctx.chat.type !== 'private') {
+      await ctx.reply('Please use this command in a private chat.');
       return;
     }
-    await ctx.scene.enter(WIZARD_SCENE_ID);
+    const user = await this.greeterService.getUserByTelegramId(
+      ctx.from.id.toString(),
+    );
+    if (!user) {
+      await ctx.reply('You are not registered in any group.');
+      return;
+    }
+    await ctx.scene.enter(EDIT_PROFILE_SCENE_ID, {
+      groupId: user.groupId,
+    });
+  }
+
+  @Command('profile')
+  async onProfileCommand(@Ctx() ctx: Context): Promise<void> {
+    if (ctx.chat.type !== 'private') {
+      await ctx.reply('Please use this command in a private chat.');
+      return;
+    }
+    const user = await this.greeterService.getUserByTelegramId(
+      ctx.from.id.toString(),
+    );
+    if (!user) {
+      await ctx.reply('You are not registered in any group.');
+      return;
+    }
+    await ctx.reply(
+      `Your profile information: ${user.name} (${user.username ? '@' + user.username : 'No username'})`,
+    );
+  }
+
+  @Command('gift_to')
+  async onRecepientCommand(@Ctx() ctx: Context): Promise<void> {
+    if (ctx.chat.type !== 'private') {
+      await ctx.reply('Please use this command in a private chat.');
+      return;
+    }
+    const user = await this.greeterService.getUserByTelegramId(
+      ctx.from.id.toString(),
+    );
+
+    if (!user) {
+      await ctx.reply('You are not registered in any group.');
+      return;
+    }
+    const group = await this.greeterService.getGroup(user.groupId);
+    if (!group.matched) {
+      await ctx.reply(
+        `Secret Santa is not started yet for ${group.name}.\nPlease wait for the admin to start it.`,
+      );
+      return;
+    }
+
+    const match = await this.greeterService.getMatch(user.id);
+    if (!match) {
+      await ctx.reply('You are not matched with anyone.');
+      return;
+    }
+
+    await ctx.reply(
+      `Your recepient is ${match.receiver.name} (${match.receiver.username ? '@' + match.receiver.username : 'No username'})`,
+    );
   }
 }

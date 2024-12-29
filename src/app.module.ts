@@ -28,8 +28,27 @@ export class AppModule implements OnApplicationBootstrap {
   ) {}
 
   async onApplicationBootstrap() {
-    const commands = [{ command: 'start', description: 'Start the bot' }];
+    const privateCommands = [
+      { command: 'start', description: 'Start the bot' },
+      { command: 'profile', description: 'View your profile' },
+      { command: 'edit_profile', description: 'Edit your profile' },
+      { command: 'gift_to', description: 'View who you are giving gift to' },
+    ];
 
-    await this.bot.telegram.setMyCommands(commands);
+    const groupCommands = [
+      { command: 'start', description: 'Start the bot' },
+      { command: 'list', description: 'List users in the game for the group' },
+    ];
+
+    await this.bot.telegram.setMyCommands(groupCommands, {
+      scope: {
+        type: 'all_group_chats',
+      },
+    });
+    await this.bot.telegram.setMyCommands(privateCommands, {
+      scope: {
+        type: 'all_private_chats',
+      },
+    });
   }
 }
