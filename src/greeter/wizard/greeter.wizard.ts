@@ -13,7 +13,7 @@ export class GreeterWizard {
     const userId = ctx.from.id;
     const user = await this.greeterService.getUser(groupId, userId);
     if (user) {
-      ctx.wizard.next();
+      ctx.scene.leave();
       return `Welcome back ${user.name}!\nNo action needed from you for now.\n\nYour Secret Santa recipient will be announced soon!`;
     }
     ctx.wizard.next();
