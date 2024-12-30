@@ -31,8 +31,7 @@ export class EditProfileWizard {
       !msg.text ||
       msg.text.length < 2 ||
       msg.text.length > 32 ||
-      msg.text.includes('/') ||
-      !/^[a-zA-Z]+$/.test(msg.text)
+      msg.text.includes('/')
     ) {
       return 'Please send me your name 👋';
     }
