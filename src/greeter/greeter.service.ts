@@ -28,6 +28,9 @@ export class GreeterService {
   async getGroup(groupId: string) {
     return await this.prisma.group.findUnique({
       where: { telegramId: groupId },
+      include: {
+        users: true,
+      },
     });
   }
 
@@ -74,6 +77,51 @@ export class GreeterService {
   async getUsersByGroupId(groupId: string) {
     return await this.prisma.user.findMany({
       where: { groupId },
+    });
+  }
+
+  async startSecretSanta(groupId: string) {
+    const users = await this.getUsersByGroupId(groupId);
+
+    const givers = users.map((user) => user.id);
+    const receivers = users.map((user) => user.id).reverse();
+
+    const matches: { giverId: number; receiverId: number }[] = [];
+
+    while (givers.length > 0 && receivers.length > 0) {
+      const i = Math.floor(Math.random() * givers.length);
+      const j = Math.floor(Math.random() * receivers.length);
+
+      if (
+        givers.length === 1 &&
+        receivers.length === 1 &&
+        givers[i] === receivers[j]
+      ) {
+        break;
+      }
+
+      const giver = givers[i];
+      const receiver = receivers[j];
+
+      if (giver === receiver) {
+        continue;
+      }
+
+      matches.push({ giverId: giver, receiverId: receiver });
+      givers.splice(givers.indexOf(giver), 1);
+      receivers.splice(receivers.indexOf(receiver), 1);
+    }
+    if (matches.length !== users.length) {
+      return await this.startSecretSanta(groupId);
+    }
+
+    await this.prisma.match.createMany({
+      data: matches,
+    });
+
+    return await this.prisma.group.update({
+      where: { telegramId: groupId },
+      data: { matched: true },
     });
   }
 }

@@ -43,4 +43,6 @@ model Match {
 
     giver    User @relation(fields: [giverId], references: [id], name: "GiverMatches")
     receiver User @relation(fields: [receiverId], references: [id], name: "ReceiverMatches")
+
+    @@map("matches")
 }

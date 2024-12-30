@@ -13,7 +13,7 @@ import { PrismaModule } from './prisma/prisma.module';
     TelegrafModule.forRootAsync({
       botName: GreeterBotName,
       useFactory: () => ({
-        token: process.env.GREETER_BOT_TOKEN,
+        token: process.env.BOT_TOKEN,
         middlewares: [sessionMiddleware],
         include: [GreeterModule],
       }),
@@ -38,6 +38,10 @@ export class AppModule implements OnApplicationBootstrap {
     const groupCommands = [
       { command: 'start', description: 'Start the bot' },
       { command: 'list', description: 'List users in the game for the group' },
+      {
+        command: 'start_secret_santa',
+        description: 'Start Secret Santa for the group',
+      },
     ];
 
     await this.bot.telegram.setMyCommands(groupCommands, {

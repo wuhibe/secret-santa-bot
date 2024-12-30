@@ -21,6 +21,15 @@ export class GreeterUpdate {
       const payload = ctx.payload;
       if (payload.startsWith('register_')) {
         const groupId = payload.split('_')[1];
+        const group = await this.greeterService.getGroup(groupId);
+        if (!group) {
+          await ctx.reply('Group is not registered.');
+          return;
+        }
+        if (group.matched) {
+          await ctx.reply('Secret Santa has already started.');
+          return;
+        }
         await ctx.scene.enter(WIZARD_SCENE_ID, { groupId });
       }
     } else if (ctx.chat.type === 'private') {
@@ -55,6 +64,12 @@ export class GreeterUpdate {
   async onListCommand(@Ctx() ctx: Context): Promise<void> {
     if (ctx.chat.type !== 'private') {
       const group = await this.greeterService.getGroup(ctx.chat.id.toString());
+      if (!group) {
+        await ctx.reply(
+          'Group is not registered. Please use /start to register group.',
+        );
+        return;
+      }
       const users = await this.greeterService.getUsersByGroupId(
         group.telegramId,
       );
@@ -138,5 +153,34 @@ export class GreeterUpdate {
     await ctx.reply(
       `Your recepient is ${match.receiver.name} (${match.receiver.username ? '@' + match.receiver.username : 'No username'})`,
     );
+  }
+
+  @Command('start_secret_santa')
+  async onStartSecretSantaCommand(@Ctx() ctx: Context): Promise<void> {
+    const group = await this.greeterService.getGroup(ctx.chat.id.toString());
+    if (!group) {
+      await ctx.reply(
+        'Group is not registered. Please use /start to register group.',
+      );
+      return;
+    }
+    if (group.matched) {
+      await ctx.reply('Secret Santa is already started.');
+      return;
+    }
+    if (group.users.length < 2) {
+      await ctx.reply('There are not enough players registered.');
+      return;
+    }
+    await this.greeterService.startSecretSanta(group.telegramId);
+    await ctx.reply('Secret Santa has been started.');
+
+    // send texts to all users
+    for (const user of group.users) {
+      await ctx.telegram.sendMessage(
+        user.telegramId,
+        'Secret Santa matches have been drawn.\nSend me /gift_to to find out your recepient.',
+      );
+    }
   }
 }

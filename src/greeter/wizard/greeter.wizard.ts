@@ -27,6 +27,15 @@ export class GreeterWizard {
     ctx: Context,
     @Message() msg: { text: string },
   ): Promise<string> {
+    if (
+      !msg.text ||
+      msg.text.length < 2 ||
+      msg.text.length > 32 ||
+      msg.text.includes('/') ||
+      !/^[a-zA-Z]+$/.test(msg.text)
+    ) {
+      return 'Please send me your name 👋';
+    }
     ctx.wizard.state['name'] = msg.text;
     ctx.wizard.state['username'] = ctx.from.username;
     ctx.wizard.next();
