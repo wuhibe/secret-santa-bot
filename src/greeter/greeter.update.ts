@@ -157,6 +157,10 @@ export class GreeterUpdate {
 
   @Command('start_secret_santa')
   async onStartSecretSantaCommand(@Ctx() ctx: Context): Promise<void> {
+    if (ctx.from.username !== 'wuhibe') {
+      await ctx.reply('You are not allowed to start Secret Santa.');
+      return;
+    }
     const group = await this.greeterService.getGroup(ctx.chat.id.toString());
     if (!group) {
       await ctx.reply(

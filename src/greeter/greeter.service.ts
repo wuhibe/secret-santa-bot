@@ -37,7 +37,7 @@ export class GreeterService {
   async saveUser(
     userId: number,
     name: string,
-    username: string,
+    username: string | undefined,
     groupId: string,
   ) {
     return await this.prisma.user.upsert({
